@@ -1,0 +1,236 @@
+#Sai Anand K
+#20221074
+#TCP server program
+
+
+import socket
+
+def start_server():
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+
+    host = 'localhost'
+    port = 12345
+    
+
+    server_socket.bind((host, port))
+    
+
+    server_socket.listen(1)
+    print(f"Server listening on {host}:{port}")
+    
+    while True:
+ 
+        client_socket, addr = server_socket.accept()
+        print(f"Connection from {addr} has been established.")
+        
+
+        message = client_socket.recv(1024).decode('utf-8')
+        print(f"Received message: {message}")
+        
+
+        response = "Message received".encode('utf-8')
+        client_socket.send(response)
+        
+
+        client_socket.close()
+
+if __name__ == "__main__":
+    start_server()
+
+#####Server side output#########
+"""
+Server listening on localhost:12345
+Connection from ('127.0.0.1', 48216) has been established.
+Received message: Hello, Server!
+
+"""
+
+#Sai Anand K
+#20221074
+#TCP client program
+
+
+import socket
+
+def start_client():
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+
+    host = 'localhost'
+    port = 12345
+    
+ 
+    client_socket.connect((host, port))
+    print("Connected to the server")
+    
+  
+    message = "Hello, Server!".encode('utf-8')
+    client_socket.send(message)
+    
+
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+    
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    start_client()
+
+#####Client side output#########
+"""
+Connected to the server
+Response from server: Message received
+
+"""
+
+#Sai Anand K
+#20221074
+#UDP server side program
+
+import socket
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+    
+    host = 'localhost'
+    port = 12345
+    
+    server_socket.bind((host, port))
+    
+    while True:
+        data, address = server_socket.recvfrom(1024)
+        print(f"Received message: {data.decode('UTF-8')} from {address}")
+        
+        response = "Message received. Closing connection.".encode('utf-8')  
+        server_socket.sendto(response, address)  
+        break
+
+    server_socket.close()
+
+
+if __name__ == "__main__":
+    start_server()
+
+######Server side output#####
+"""
+Received message: Hello, Server! from ('127.0.0.1', 55851)
+"""
+
+#Sai Anand K
+#20221074
+#UDP client program
+
+
+import socket
+
+def start_client():
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+
+    host = 'localhost'
+    port = 12345
+    
+ 
+    client_socket.connect((host, port))
+    print("Connected to the server")
+    
+  
+    message = "Hello, Server!".encode('utf-8')
+    client_socket.send(message)
+    
+
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+    
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    start_client()
+
+#######Client side output######
+"""
+Connected to the server
+Response from server: Message received. Closing connection.
+
+"""
+
+#Sai Anand K
+#20221074
+#Odd or Even server-client program
+
+
+import socket
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+    
+    host = 'localhost'
+    port = 12345
+    
+    server_socket.bind((host, port))
+    
+    while True:
+        data, address = server_socket.recvfrom(1024)
+        print(f"Received number: {data.decode('UTF-8')} from {address}")
+        data = int(data.decode('utf-8'))
+        if (data%2==0):
+               response = "Number is even".encode('utf-8') 
+        else:
+               response = "Number is odd".encode('utf-8') 
+                
+        server_socket.sendto(response, address)  
+        break
+
+    server_socket.close()
+
+
+if __name__ == "__main__":
+    start_server()
+
+######Server side output########
+"""
+Received number: 5 from ('127.0.0.1', 56540)
+"""
+
+#Sai Anand K
+#20221074
+#Odd or Even server-client program
+
+import socket
+
+def start_client():
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+
+    host = 'localhost'
+    port = 12345
+    
+ 
+    client_socket.connect((host, port))
+    print("Connected to the server")
+    
+    num = input("Enter a number : ").encode('utf-8')
+    client_socket.send(num)
+    
+
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+    
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    start_client()
+######Client side output######
+"""
+Connected to the server
+Enter a number : 5
+Response from server: Number is odd
+"""

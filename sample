@@ -1,0 +1,56 @@
+import socket
+
+def start_client():
+
+  message = input("Enter a message : ")
+  
+  client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+
+  host = 'localhost'
+  port = 12345
+    
+ 
+  client_socket.connect((host, port))
+  print("Connected to the server")
+  
+  while True:    
+  
+    message = input("Enter a message : ")
+    client_socket.send(message.encode('utf-8'))
+    
+
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+    
+    
+    
+
+if __name__ == "__main__":
+    start_client()
+this is client side
+import socket
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+    
+    host = 'localhost'
+    port = 12345
+    
+    server_socket.bind((host, port))
+    
+    while True:
+        data, address = server_socket.recvfrom(1024)
+        print(f"Received message: {data.decode('UTF-8')} from {address}")
+        
+        response = input("Enter a message : ")
+        server_socket.sendto(response.encode('utf-8') , address)  
+        
+
+
+if __name__ == "__main__":
+    start_server()
+
+this is server side
+
+modify this program such that it is a multithreaded application so that it acts as a group chat modify both server and client side if needed . 
