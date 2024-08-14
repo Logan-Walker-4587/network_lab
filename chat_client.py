@@ -4,27 +4,33 @@ import threading
 def receive_messages(client_socket):
     while True:
         try:
-            message = client_socket.recv(1024).decode('utf-8')
-            print(f"\nNew message: {message}")
-        except:
-            print("Connection closed.")
+            message, _ = client_socket.recvfrom(1024)
+            print(f"\n{message.decode('utf-8')}")
+            print(f"{username}: ", end="")
+        except Exception as e:
+            print(f"An error occurred while receiving: {e}")
+            client_socket.close()
             break
 
 def start_client():
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = 'localhost'
-    port = 12345
-    client_socket.connect((host, port))
-    print("Connected to the server")
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('localhost', 12345)
+
+    global username
+    username = input("Enter your username: ")
+    client_socket.sendto(f"{username} joined the chat!".encode('utf-8'), server_address)
     
-    # Start a thread to handle incoming messages
-    receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
-    receive_thread.start()
-    
+    thread = threading.Thread(target=receive_messages, args=(client_socket,))
+    thread.start()
+
     while True:
-        message = input("Enter a message: ")
-        client_socket.send(message.encode('utf-8'))
+        message = input(f"{username}: ")
+        if message.lower() == 'exit':
+            client_socket.sendto(f"{username} has left the chat.".encode('utf-8'), server_address)
+            break
+        client_socket.sendto(f"{username}: {message}".encode('utf-8'), server_address)
+
+    client_socket.close()
 
 if __name__ == "__main__":
     start_client()
-
