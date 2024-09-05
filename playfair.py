@@ -68,7 +68,9 @@ for letter in list1:
                row_list = []
                count = 0
 
-print(f"matrix is {matrix}")
+print(f"matrix is")
+for row in matrix:
+    print(" ".join(row))
 
 row_count = 0
 col_count = 0
