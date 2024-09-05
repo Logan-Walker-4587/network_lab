@@ -19,6 +19,10 @@ for i in range(len(plain_text)):
             new_text += plain_text[i]
 if (len(plain_text)%2==1):
     new_text+= 'x'
+text_before = new_text
+for i in range(len(new_text)):
+        if new_text[i]=='j':
+            new_text[i]='i'
 plain_text = new_text
 
 list1 = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'k', 'l', 'm',
