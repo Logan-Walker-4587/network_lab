@@ -1,7 +1,7 @@
 import socket
 import threading
 
-# Define erver address and port
+# Define server address and port
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 BUFFER_SIZE = 1024
@@ -20,26 +20,35 @@ def broadcast_message(message, sender_address):
     """Broadcast message to all clients except the sender."""
     for client in clients:
         if client != sender_address:
-            server_socket.sendto(message, client)
+            try:
+                server_socket.sendto(message, client)  # Send to other clients
+            except Exception as e:
+                print(f"Failed to send message to {client}: {e}")
 
 def handle_client():
     while True:
         # Receive message from client
-        message, client_address = server_socket.recvfrom(BUFFER_SIZE)
-        
-        # Add the client address to the list of connected clients
-        clients.add(client_address)
-        
-        # Broadcast the message to all other clients
-        broadcast_message(message, client_address)
-        
-        print(f"Message from {client_address}: {message.decode('utf-8')}")
+        try:
+            message, client_address = server_socket.recvfrom(BUFFER_SIZE)
+
+            # Add the client address to the set of connected clients
+            clients.add(client_address)
+
+            # Print the received message
+            print(f"Message from {client_address}: {message.decode('utf-8')}")
+
+            # Broadcast the message to all other clients
+            broadcast_message(message, client_address)
+
+        except Exception as e:
+            print(f"Error receiving message: {e}")
 
 # Start the server to handle clients in a separate thread
 server_thread = threading.Thread(target=handle_client)
 server_thread.daemon = True
 server_thread.start()
 
-# Keep the server running
-server_thread.join()
+# Keep the server running indefinitely
+while True:
+    pass
 
