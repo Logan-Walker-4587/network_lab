@@ -234,3 +234,875 @@ Connected to the server
 Enter a number : 5
 Response from server: Number is odd
 """
+#Sai Anand K
+#20221074
+#Single chat program client side
+import socket
+import threading
+
+def receive_messages(client_socket):
+    while True:
+        try:
+            message, _ = client_socket.recvfrom(1024)
+            print(f"\n{message.decode('utf-8')}")
+            print(f"{username}: ", end="")
+        except Exception as e:
+            print(f"An error occurred while receiving: {e}")
+            client_socket.close()
+            break
+
+def start_client():
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('localhost', 12345)
+
+    global username
+    username = input("Enter your username: ")
+    client_socket.sendto(f"{username} joined the chat!".encode('utf-8'), server_address)
+    
+    thread = threading.Thread(target=receive_messages, args=(client_socket,))
+    thread.start()
+
+    while True:
+        message = input(f"{username}: ")
+        if message.lower() == 'exit':
+            client_socket.sendto(f"{username} has left the chat.".encode('utf-8'), server_address)
+            break
+        client_socket.sendto(f"{username}: {message}".encode('utf-8'), server_address)
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    start_client()
+
+########client side output#######
+"""
+Enter your username: client1
+client1: hi
+Server: hello
+
+"""
+#Sai Anand K
+#20221074
+#Single chat program server side
+import socket
+import threading
+
+clients = []
+
+def broadcast(message, sender_address):
+    print(f"Broadcasting message from {sender_address}: {message.decode('utf-8')}")
+    for client in clients:
+        if client != sender_address:
+            try:
+                server_socket.sendto(message, client)
+            except Exception as e:
+                print(f"Failed to send message to {client}: {e}")
+                clients.remove(client)
+
+def handle_server_input():
+    while True:
+        message = input("Server: ")
+        broadcast(f"Server: {message}".encode('utf-8'), None)
+
+def start_server():
+    global server_socket
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_socket.bind(('localhost', 12345))
+
+    print("Server is running...")
+
+    threading.Thread(target=handle_server_input).start()
+
+    while True:
+        message, client_address = server_socket.recvfrom(1024)
+        if client_address not in clients:
+            clients.append(client_address)
+            print(f"New client connected: {client_address}")
+        
+        broadcast(message, client_address)
+
+if __name__ == "__main__":
+    start_server()
+########server side output#######
+"""
+Server is running...
+Server: New client connected: ('127.0.0.1', 41649)
+Broadcasting message from ('127.0.0.1', 41649): client1 joined the chat!
+Broadcasting message from ('127.0.0.1', 41649): client1: hi
+server : hello
+
+"""
+#Sai Anand K
+#20221074
+#Multichat Program Server side
+import socket
+import threading
+
+# Define erver address and port
+SERVER_IP = '127.0.0.1'
+SERVER_PORT = 12345
+BUFFER_SIZE = 1024
+
+# Create a UDP socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Bind the socket to the server address
+server_socket.bind((SERVER_IP, SERVER_PORT))
+
+clients = set()  # Set to store unique client addresses
+
+print(f"Server started on {SERVER_IP}:{SERVER_PORT}")
+
+def broadcast_message(message, sender_address):
+    """Broadcast message to all clients except the sender."""
+    for client in clients:
+        if client != sender_address:
+            server_socket.sendto(message, client)
+
+def handle_client():
+    while True:
+        # Receive message from client
+        message, client_address = server_socket.recvfrom(BUFFER_SIZE)
+        
+        # Add the client address to the list of connected clients
+        clients.add(client_address)
+        
+        # Broadcast the message to all other clients
+        broadcast_message(message, client_address)
+        
+        print(f"Message from {client_address}: {message.decode('utf-8')}")
+
+# Start the server to handle clients in a separate thread
+server_thread = threading.Thread(target=handle_client)
+server_thread.daemon = True
+server_thread.start()
+
+# Keep the server running
+server_thread.join()
+
+########server side output#######
+"""
+Server started on 127.0.0.1:12345
+Message from ('127.0.0.1', 48125): client1: hello
+server : hi
+Message from ('127.0.0.2', 48125): client1: hello im client 2
+server : hello client 2
+"""
+#Sai Anand K
+#20221074
+#Multichat Program Client side
+import socket
+import threading
+
+# Define server address and port
+SERVER_IP = '127.0.0.1'
+SERVER_PORT = 12345
+BUFFER_SIZE = 1024
+
+# Get the username from the user
+username = input("Enter your username: ")
+
+# Create a UDP socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+def receive_messages():
+    """Receive messages from the server."""
+    while True:
+        try:
+            message, _ = client_socket.recvfrom(BUFFER_SIZE)
+            print(message.decode('utf-8'))
+        except:
+            break
+
+def send_messages():
+    """Send messages to the server."""
+    while True:
+        message = input()  # Input from the user
+        full_message = f"{username}: {message}"
+        client_socket.sendto(full_message.encode('utf-8'), (SERVER_IP, SERVER_PORT))
+
+# Start a thread for receiving messages from the server
+receive_thread = threading.Thread(target=receive_messages)
+receive_thread.daemon = True
+receive_thread.start()
+
+# Main thread handles sending messages
+send_messages()
+########client side output#######
+"""
+Enter your username: client1
+client1 : hello
+server : hi
+
+Enter your username: client2
+client2 : hello im client 2
+server : hello client 2
+
+"""
+#Sai Anand K
+#20221074
+#CRC check server side
+import socket
+
+# CRC utility functions
+def xor(a, b):
+    return ''.join(['1' if a[i] != b[i] else '0' for i in range(1, len(b))])
+
+def mod2div(dividend, divisor):
+    pick = len(divisor)
+    tmp = dividend[0:pick]
+
+    while pick < len(dividend):
+        if tmp[0] == '1':
+            tmp = xor(divisor, tmp) + dividend[pick]
+        else:
+            tmp = xor('0'*pick, tmp) + dividend[pick]
+        pick += 1
+
+    if tmp[0] == '1':
+        tmp = xor(divisor, tmp)
+    else:
+        tmp = xor('0'*pick, tmp)
+    
+    return tmp
+
+def encode_data(data, key):
+    key_len = len(key)
+    appended_data = data + '0'*(key_len - 1)
+    remainder = mod2div(appended_data, key)
+    return data + remainder
+
+def crc_check(received_data, key):
+    remainder = mod2div(received_data, key)
+    return remainder == '0'*(len(key) - 1)
+
+def flip_bit(data, position):
+    bit_list = list(data)
+    bit_list[position] = '1' if bit_list[position] == '0' else '0'
+    return ''.join(bit_list)
+
+# UDP Server to handle CRC check
+def server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('localhost', 12345)
+    server_socket.bind(server_address)
+
+    print("Server is ready and waiting for messages...")
+
+    while True:
+        # Receive data and key from client
+        data, client_address = server_socket.recvfrom(1024)
+        key, _ = server_socket.recvfrom(1024)
+
+        data = data.decode()
+        key = key.decode()
+
+        print(f"Received message: {data} from {client_address}")
+        print(f"Received generator key: {key}")
+
+        # Simulate asking whether to introduce an error
+        introduce_error = input("Server: Do you want to introduce an error? (yes/no): ").strip().lower()
+
+        # Encoding the data with CRC
+        encoded_data = encode_data(data, key)
+
+        if introduce_error == 'yes':
+            bit_position = int(input(f"Server: Enter the bit position (0 to {len(encoded_data)-1}) to flip: "))
+            received_data = flip_bit(encoded_data, bit_position)
+            print(f"Server: Data with error introduced: {received_data}")
+        else:
+            received_data = encoded_data
+            print("Server: No error introduced.")
+
+        # Check if the message is valid using CRC
+        is_valid = crc_check(received_data, key)
+        if is_valid:
+            response = "No error detected. Transmission is successful."
+        else:
+            response = "Error detected in the received data!"
+
+        # Send the response back to the client
+        server_socket.sendto(response.encode(), client_address)
+
+if __name__ == "__main__":
+    server()
+
+#Sai Anand K
+#20221074
+#CRC check client side
+import socket
+
+def client():
+    server_address = ('localhost', 12345)
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Input the binary data and key from the user
+    data = input("Enter the binary message: ")
+    key = input("Enter the binary generator key (e.g., 1101): ")
+
+    # Sending the message and key to the server
+    client_socket.sendto(data.encode(), server_address)
+    client_socket.sendto(key.encode(), server_address)
+
+    # Receiving the CRC result from the server
+    response, _ = client_socket.recvfrom(1024)
+    print(f"Server: {response.decode()}")
+
+    # Close the socket
+    client_socket.close()
+
+if __name__ == "__main__":
+    client()
+
+### Server side output ###
+"""
+Received message: 1010101 from ('127.0.0.1', 45678)
+Received generator key: 1101
+Server: Do you want to introduce an error? (yes/no): yes
+Server: Enter the bit position (0 to 10) to flip: 2
+Server: Data with error introduced: 1000101100
+Server: Error detected in the received data!
+"""
+
+### client side output ###
+"""
+Enter the binary message: 1010101
+Enter the binary generator key (e.g., 1101): 1101
+Server: No error detected. Transmission is successful.
+
+"""
+#Sai Anand K
+#20221074
+#Hamming code server side 
+import socket
+import random
+
+# Function to check if a 7-bit Hamming code contains an error
+def check_hamming(hamming_code):
+    h = list(map(int, hamming_code))
+
+    p1 = h[0] ^ h[2] ^ h[4] ^ h[6]
+    p2 = h[1] ^ h[2] ^ h[5] ^ h[6]
+    p3 = h[3] ^ h[4] ^ h[5] ^ h[6]
+
+    # Error position
+    error_pos = p1 * 1 + p2 * 2 + p3 * 4
+    
+    return error_pos
+
+def start_server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    host = 'localhost'
+    port = 12345
+
+    server_socket.bind((host, port))
+    print("Server is listening...")
+
+    while True:
+        # Receive the Hamming code from the client
+        hamming_code, address = server_socket.recvfrom(1024)
+        hamming_code = hamming_code.decode('utf-8')
+        print(f"Received Hamming code: {hamming_code} from {address}")
+
+        # Ask whether to introduce an error
+        introduce_error = input("Do you want to introduce an error? (yes/no): ").strip().lower()
+
+        if introduce_error == 'yes':
+            # Introduce an error by flipping a random bit
+            error_bit = random.randint(0, 6)
+            hamming_code_list = list(hamming_code)
+            hamming_code_list[error_bit] = '1' if hamming_code_list[error_bit] == '0' else '0'
+            hamming_code = ''.join(hamming_code_list)
+            print(f"Error introduced at bit {error_bit + 1}. Modified code: {hamming_code}")
+
+        # Check if the Hamming code is correct
+        error_pos = check_hamming(hamming_code)
+
+        if error_pos == 0:
+            result = "No error detected. Codeword is correct."
+        else:
+            result = f"Error detected at bit position {error_pos}."
+
+        # Send the result back to the client
+        server_socket.sendto(result.encode('utf-8'), address)
+
+        break
+
+    server_socket.close()
+
+if __name__ == "__main__":
+    start_server()
+#Sai Anand K
+#20221074
+#Hamming code client side 
+import socket
+
+# Functionto calculate the 7-bit Hamming code from a 4-bit dataword
+def calculate_hamming(dataword):
+    d = list(map(int, dataword))
+    
+    # Parity bits
+    p1 = d[0] ^ d[1] ^ d[3]
+    p2 = d[0] ^ d[2] ^ d[3]
+    p3 = d[1] ^ d[2] ^ d[3]
+    
+    # Hamming code is p1 p2 d0 p3 d1 d2 d3
+    hamming_code = [p1, p2, d[0], p3, d[1], d[2], d[3]]
+    
+    return ''.join(map(str, hamming_code))
+
+def start_client():
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    host = 'localhost'
+    port = 12345
+
+    client_socket.connect((host, port))
+    print("Connected to the server")
+
+    # Input 4-bit dataword from the user
+    dataword = input("Enter 4-bit dataword: ")
+    
+    if len(dataword) != 4 or not all(bit in '01' for bit in dataword):
+        print("Invalid dataword. Please enter exactly 4 bits (0 or 1).")
+        return
+
+    # Calculate the Hamming code
+    hamming_code = calculate_hamming(dataword)
+    print(f"Hamming code generated: {hamming_code}")
+
+    # Send the Hamming code to the server
+    client_socket.send(hamming_code.encode('utf-8'))
+
+    # Receive the server's response
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response from server: {response}")
+
+    client_socket.close()
+
+if __name__ == "__main__":
+    start_client()
+### Server side output ###
+"""
+Server is listening...
+Received Hamming code: 1010101 from ('127.0.0.1', 57417)
+Do you want to introduce an error? (yes/no): yes
+Error introduced at bit 4. Modified code: 1011101
+
+Server is listening...
+Received Hamming code: 1010101 from ('127.0.0.1', 42255)
+Do you want to introduce an error? (yes/no): no
+
+"""
+
+### client side output ###
+"""
+Connected to the server
+Enter 4-bit dataword: 1101
+Hamming code generated: 1010101
+Response from server: Error detected at bit position 4.
+
+Connected to the server
+Enter 4-bit dataword: 1101
+Hamming code generated: 1010101
+Response from server: No error detected. Codeword is correct.
+
+"""
+#Sai Anand K
+#20221074
+#Playfair cipher
+
+def search(mat, element):
+    for i in range(5):
+        for j in range(5):
+            if(mat[i][j] == element):
+                return i, j
+
+
+key = input("Enter a key : ")
+plain_text = input("Enter a plain text : ")
+plain_text = plain_text.replace(" ","x")
+new_text = ""
+
+for i in range(len(plain_text)):
+        if i<len(plain_text)-1 and plain_text[i]==plain_text[i+1]:
+            new_text += plain_text[i]
+            new_text += 'x'
+            new_text += plain_text[i+1]
+            new_text += 'x'
+            i+=1
+        else:
+            new_text += plain_text[i]
+plain_text = new_text
+
+list1 = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'k', 'l', 'm',
+         'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+ 
+digraph = []
+group = 0
+matrix = []
+
+for i in range (2,len(plain_text),2):
+        digraph.append(plain_text[group:i])
+        group = i
+        
+digraph.append(plain_text[group:])
+
+key_letters = []
+
+for i in range (0,len(key)):
+        if key[i] not in key_letters:
+             key_letters.append(key[i])
+        
+print (f"plain text = {plain_text} and key letters = {key_letters}")
+print (f"digraph is {digraph}")
+
+count = 0
+row_list = []
+
+for letter in key_letters:
+        if count<5:
+           row_list.append(letter)
+           count+=1
+        if count == 5:
+           matrix.append(row_list)
+           row_list = []
+           count = 0
+for letter in list1:
+         if letter not in key_letters:
+           if count<5:
+               row_list.append(letter)
+               count+=1
+           if count==5:
+               matrix.append(row_list)
+               row_list = []
+               count = 0
+
+print(f"matrix is {matrix}")
+
+row_count = 0
+col_count = 0
+i = 0
+ciphertext = ""
+
+#print (f"digraph elements are {digraph[0][0]} {digraph[0][1]}")
+for i in range (len(digraph)):
+       if len(digraph[i])==0:
+             break
+       if len(digraph[i])!=0:
+             row1,col1 = search(matrix,digraph[i][0])
+       if len(digraph[i])==2:
+             row2,col2 = search(matrix,digraph[i][1])
+       
+       
+       if row1==row2 :
+            #print(f"{digraph[i][0]} and {digraph[i][1]} are in same row")
+            if col1!=4  and col2 != 4:
+                ciphertext += matrix[row1][col1+1]
+                ciphertext += matrix[row2][col2+1]
+            else :
+                if col1==4:
+                     ciphertext += matrix[row1][0]
+                     ciphertext += matrix[row2][col2+1]
+                else:
+                     ciphertext += matrix[row1][col1+1]
+                     ciphertext += matrix[row2][0]                   
+       elif col1==col2 :
+            #print(f"{digraph[i][0]} and {digraph[i][1]} are in same col")
+            if row1!=4  and row2 != 4:
+                ciphertext += matrix[row1+1][col1]
+                ciphertext += matrix[row2+1][col2]
+            else :
+                if row1==4:
+                     ciphertext += matrix[0][col1]
+                     ciphertext += matrix[row2+1][col2]
+                else:
+                     ciphertext += matrix[0][col2]
+                     ciphertext += matrix[row1+1][col1]
+       else:
+               #print(f"{digraph[i][0]} and {digraph[i][1]} are diagonals")
+               ciphertext += matrix[row1][col2]
+               ciphertext += matrix[row2][col1]
+               
+print(f"Cipher text = {ciphertext}")
+                     
+          
+###  output ###
+"""
+Enter a key : monarchy
+Enter a plain text : instrumentsz
+plain text = instrumentsz and key letters = ['m', 'o', 'n', 'a', 'r', 'c', 'h', 'y']
+digraph is ['in', 'st', 'ru', 'me', 'nt', 'sz']
+matrix is
+m o n a r
+c h y b d
+e f g i k
+l p q s t
+u v w x z
+Cipher text = gatlmzclrqtx
+
+"""    
+#Sai Anand K
+#20221074
+#Railfence cipher client 
+import socket
+
+# Rail Fence Cipher encryption
+def rail_fence_encrypt(text, depth):
+    rail = [['' for _ in range(len(text))] for _ in range(depth)]
+    
+    direction_down = False
+    row, col = 0, 0
+
+    for char in text:
+        rail[row][col] = char
+        col += 1
+
+        if row == 0 or row == depth - 1:
+            direction_down = not direction_down
+
+        row += 1 if direction_down else -1
+
+    encrypted_text = []
+    for i in range(depth):
+        for j in range(len(text)):
+            if rail[i][j] != '':
+                encrypted_text.append(rail[i][j])
+
+    return ''.join(encrypted_text)
+
+
+def client():
+    server_address = ('localhost', 12345)
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Input plain text and depth from the user
+    text = input("Enter the plain text: ")
+    depth = input("Enter the depth for the Rail Fence Cipher: ")
+
+    # Encrypt the message using Rail Fence Cipher
+    encrypted_text = rail_fence_encrypt(text, int(depth))
+    print(f"Encrypted message: {encrypted_text}")
+
+    # Send encrypted message and depth to the server
+    client_socket.sendto(encrypted_text.encode(), server_address)
+    client_socket.sendto(depth.encode(), server_address)
+
+    # Close the socket
+    client_socket.close()
+
+if __name__ == "__main__":
+    client()
+#Sai Anand K
+#20221074
+#Railfence cipher server
+import socket
+
+# Rail Fence Cipher decryption
+def rail_fence_decrypt(cipher, depth):
+    rail = [['' for _ in range(len(cipher))] for _ in range(depth)]
+    
+    direction_down = None
+    row, col = 0, 0
+
+    for i in range(len(cipher)):
+        rail[row][col] = '*'
+        col += 1
+
+        if row == 0:
+            direction_down = True
+        elif row == depth - 1:
+            direction_down = False
+
+        row += 1 if direction_down else -1
+
+    index = 0
+    for i in range(depth):
+        for j in range(len(cipher)):
+            if rail[i][j] == '*' and index < len(cipher):
+                rail[i][j] = cipher[index]
+                index += 1
+
+    decrypted_text = []
+    row, col = 0, 0
+    for i in range(len(cipher)):
+        decrypted_text.append(rail[row][col])
+        col += 1
+
+        if row == 0:
+            direction_down = True
+        elif row == depth - 1:
+            direction_down = False
+
+        row += 1 if direction_down else -1
+
+    return ''.join(decrypted_text)
+
+
+# UDP Server to handle Rail Fence Cipher decryption
+def server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('localhost', 12345)
+    server_socket.bind(server_address)
+
+    print("Server is ready and waiting for messages...")
+
+    while True:
+        # Receive the encrypted message and depth from the client
+        encrypted_message, client_address = server_socket.recvfrom(1024)
+        depth, _ = server_socket.recvfrom(1024)
+
+        encrypted_message = encrypted_message.decode()
+        depth = int(depth.decode())
+
+        print(f"Received encrypted message: {encrypted_message} from {client_address}")
+        print(f"Received depth: {depth}")
+
+        # Decrypt the message using the Rail Fence Cipher
+        decrypted_message = rail_fence_decrypt(encrypted_message, depth)
+        print(f"Decrypted message: {decrypted_message}")
+
+        # Server can display the decrypted message (no need to send it back in this case)
+
+if __name__ == "__main__":
+    server()
+### Server side output ###
+"""
+Server is ready and waiting for messages...
+Received encrypted message: HLOTHERELE from ('127.0.0.1', 45678)
+Received depth: 3
+Decrypted message: HELLOTHERE
+
+
+"""
+
+### client side output ###
+"""
+Enter the plain text: HELLOTHERE
+Enter the depth for the Rail Fence Cipher: 3
+Encrypted message: HLOTHERELE
+
+"""
+#Sai Anand K
+#20221074
+#LZW client program
+import socket
+
+# LZW Compression Algorithm
+def lzw_compress(uncompressed):
+    # Build the dictionary with single character strings
+    dictionary = {chr(i): i for i in range(256)}
+    dict_size = 256
+    w = ""
+    compressed_data = []
+
+    for char in uncompressed:
+        wc = w + char
+        if wc in dictionary:
+            w = wc
+        else:
+            compressed_data.append(dictionary[w])
+            dictionary[wc] = dict_size
+            dict_size += 1
+            w = char
+
+    # Output the code for w
+    if w:
+        compressed_data.append(dictionary[w])
+
+    return compressed_data
+
+
+def client():
+    server_address = ('localhost', 12345)
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    # Input the text from the user
+    text = input("Enter the text to compress using LZW: ")
+
+    # Compress the text using LZW
+    compressed_data = lzw_compress(text)
+    compressed_data_str = ','.join(map(str, compressed_data))  # Convert list to string for transmission
+    print(f"Compressed data: {compressed_data_str}")
+
+    # Send the compressed data to the server
+    client_socket.sendto(compressed_data_str.encode(), server_address)
+
+    # Close the socket
+    client_socket.close()
+
+if __name__ == "__main__":
+    client()
+#Sai Anand K
+#20221074
+#LZW server program
+import socket
+
+# LZW Decompression Algorithm
+def lzw_decompress(compressed):
+    # Build the dictionary with single character strings
+    dictionary = {i: chr(i) for i in range(256)}
+    dict_size = 256
+    result = []
+
+    # Get the first code
+    w = chr(compressed[0])
+    result.append(w)
+
+    for k in compressed[1:]:
+        if k in dictionary:
+            entry = dictionary[k]
+        elif k == dict_size:
+            entry = w + w[0]
+        else:
+            raise ValueError("Bad compressed k: %s" % k)
+
+        result.append(entry)
+
+        # Add w + entry[0] to the dictionary
+        dictionary[dict_size] = w + entry[0]
+        dict_size += 1
+
+        w = entry
+
+    return ''.join(result)
+
+# UDP Server to handle LZW decompression
+def server():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = ('localhost', 12345)
+    server_socket.bind(server_address)
+
+    print("Server is ready and waiting for messages...")
+
+    while True:
+        # Receive the compressed data from the client
+        compressed_data, client_address = server_socket.recvfrom(1024)
+        compressed_data_str = compressed_data.decode()
+
+        # Convert the received string back to a list of integers
+        compressed_list = list(map(int, compressed_data_str.split(',')))
+        print(f"Received compressed data: {compressed_list} from {client_address}")
+
+        # Decompress the received data using LZW
+        decompressed_data = lzw_decompress(compressed_list)
+        print(f"Decompressed message: {decompressed_data}")
+
+if __name__ == "__main__":
+    server()
+### Server side output ###
+"""
+Server is ready and waiting for messages...
+Received compressed data: [84, 79, 66, 69, 79, 82, 78, 79, 84, 257, 259, 261, 263, 260, 262] 
+from ('127.0.0.1', 45678)
+Decompressed message: TOBEORNOTTOBEORTOBEORNOT
+
+"""
+
+### client side output ###
+"""
+Enter the text to compress using LZW: TOBEORNOTTOBEORTOBEORNOT
+Compressed data: 84,79,66,69,79,82,78,79,84,257,259,261,263,260,262
+
+"""
